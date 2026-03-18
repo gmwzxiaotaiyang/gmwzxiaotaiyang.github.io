@@ -1,803 +1,987 @@
-$(function () {
-  
-  const is_Snackbar = GLOBAL_CONFIG.Snackbar !== undefined ? true : false
+document.addEventListener('DOMContentLoaded', () => {
+  let headerContentWidth, $nav
+  let mobileSidebarOpen = false
 
-  /**
-   * 當menu過多時，自動適配，避免UI錯亂
-   */
-  const ph_width = $("#page-header").width()
-  const search_width = $('#search_button').outerWidth()
-  const blogName_width = $('#blog_name').width()
-  var mw = 0;
-  for (var i = 0; i < $('#page-header .menus_item').length; i++) {
-    mw = mw + $('#page-header .menus_item').eq(i).outerWidth()
-  }
+  const adjustMenu = init => {
+    const getAllWidth = ele => Array.from(ele).reduce((width, i) => width + i.offsetWidth, 0)
 
-  $('#page-header').height() > 45 ? header_adjust() : ''
-
-  function header_adjust() {
-    $("#page-header .toggle-menu").addClass("is_visible")
-    $("#page-header .menus,.search span").addClass("is_invisible")
-  }
-
-  function header_adjust_back() {
-    $("#page-header .toggle-menu").removeClass("is_visible")
-    $("#page-header .menus,.search span").removeClass("is_invisible")
-  }
-
-  /**
-   * 傳入 1 sidebar打開時
-   * 傳入 2 正常狀態下
-   * 傳入 3 resize時使用
-   */
-  function is_adjust(n) {
-    var t;
-    if (n == '1') {
-      t = blogName_width  + search_width + mw > $("#page-header").width() - 300 ? true : false
-    } else if (n == '2') {
-      t = blogName_width  + search_width + mw > $("#page-header").width() ? true : false
-    } else if (n == "3") {
-      t = blogName_width  + search_width + mw > $("#page-header").width() ? true : false
+    if (init) {
+      const blogInfoWidth = getAllWidth(document.querySelector('#blog-info > a').children)
+      const menusWidth = getAllWidth(document.getElementById('menus').children)
+      headerContentWidth = blogInfoWidth + menusWidth
+      $nav = document.getElementById('nav')
     }
-    if (t) {
-      header_adjust()
-    } else {
-      header_adjust_back()
+
+    const hideMenuIndex = window.innerWidth <= 768 || headerContentWidth > $nav.offsetWidth - 120
+    $nav.classList.toggle('hide-menu', hideMenuIndex)
+  }
+
+  // 初始化header
+  const initAdjust = () => {
+    adjustMenu(true)
+    $nav.classList.add('show')
+  }
+
+  // sidebar menus
+  const sidebarFn = {
+    open: () => {
+      btf.overflowPaddingR.add()
+      btf.animateIn(document.getElementById('menu-mask'), 'to_show 0.5s')
+      document.getElementById('sidebar-menus').classList.add('open')
+      mobileSidebarOpen = true
+    },
+    close: () => {
+      btf.overflowPaddingR.remove()
+      btf.animateOut(document.getElementById('menu-mask'), 'to_hide 0.5s')
+      document.getElementById('sidebar-menus').classList.remove('open')
+      mobileSidebarOpen = false
     }
   }
-
-  $(window).bind("resize", function () {
-    if (window.innerWidth > 768) {
-      is_adjust(3)
-    } else {
-      header_adjust()
-    }
-  })
-
-  $('#page-header').css({'opacity':'1', 'animation':'headerNoOpacity .7s'})
-
-
-  /**
-   * 進入post頁sidebar自動打開
-   */
-  if ($('#sidebar').hasClass('auto_open')) {
-    if ($(".sidebar-toc__content").children().length > 0) {
-      $('#toggle-sidebar').addClass('on')
-      $(".layout_post").animate({}, function () {
-        {
-          setTimeout(function () {
-            $("#toggle-sidebar").addClass('on');
-            open_sidebar()
-          }, 300);
-
-          is_adjust(1)
-        }
-      })
-
-    } else
-      $("#toggle-sidebar").css("display", "none")
-  } else {
-    $('#toggle-sidebar').css('opacity', '1')
-  }
-
-
-  /**
-   * 點擊左下角箭頭,顯示sidebar
-   */
-
-  function close_sidebar() {
-    $('#page-header').removeClass('open-sidebar')
-    $('body').animate({
-      paddingLeft: 0
-    }, 200)
-
-    $('#sidebar').animate({}, function () {
-      $('#sidebar').css('transform', 'translateX(0px)')
-    })
-
-    $('#toggle-sidebar').animate({}, function () {
-      $('#toggle-sidebar').css({
-        'transform': 'rotateZ(0deg)',
-        'color': '#1F2D3D',
-        'opacity': "1"
-
-      })
-    })
-
-  }
-
-  function open_sidebar() {
-    $('#page-header').addClass('open-sidebar')
-    $('body').animate({
-      paddingLeft: 300
-    }, 200)
-
-    $('#sidebar').animate({}, function () {
-      $('#sidebar').css('transform', 'translateX(300px)')
-    })
-
-
-    $('#toggle-sidebar').animate({}, function () {
-      $('#toggle-sidebar').css({
-        'transform': 'rotateZ(180deg)',
-        'color': '#99a9bf',
-        'opacity': "1"
-      })
-    })
-
-  }
-  $('#toggle-sidebar').on('click', function () {
-
-    if (!isMobile() && $('#sidebar').is(':visible')) {
-      var isOpen = $(this).hasClass('on')
-      isOpen ? $(this).removeClass('on') : $(this).addClass('on')
-      if (isOpen) {
-        close_sidebar()
-        setTimeout(function () {
-          is_adjust(2)
-        }, 300)
-      } else {
-        is_adjust(1)
-        open_sidebar()
-      }
-    }
-  })
-
 
   /**
    * 首頁top_img底下的箭頭
    */
-  $(".scroll-down").on("click", function () {
-    scrollTo('#content-outer')
-  });
+  const scrollDownInIndex = () => {
+    const handleScrollToDest = () => {
+      btf.scrollToDest(document.getElementById('content-inner').offsetTop, 300)
+    }
 
+    const $scrollDownEle = document.getElementById('scroll-down')
+    $scrollDownEle && btf.addEventListenerPjax($scrollDownEle, 'click', handleScrollToDest)
+  }
 
   /**
-   * BOOKMARK 書簽
+   * 代碼
+   * 只適用於Hexo默認的代碼渲染
    */
-  $('#bookmark-it').on("click", function () {
-    if (window.sidebar && window.sidebar.addPanel) { // Mozilla Firefox Bookmark
-      window.sidebar.addPanel(document.title, window.location.href, '');
-    } else if (window.external && ('AddFavorite' in window.external)) { // IE Favorite
-      window.external.AddFavorite(location.href, document.title);
-    } else if (window.opera && window.print) { // Opera Hotlist
-      this.title = document.title;
-      return true;
-    } else { // webkit - safari/chrome     
-      if (is_Snackbar) {
-        var bookmarkText = GLOBAL_CONFIG.Snackbar.bookmark.message_prev + ' ' + (navigator.userAgent.toLowerCase().indexOf('mac') != -1 ? 'Command/Cmd' : 'CTRL') + '+ D ' + GLOBAL_CONFIG.Snackbar.bookmark.message_next + '.';
-        snackbarShow(bookmarkText)
+  const addHighlightTool = () => {
+    const highLight = GLOBAL_CONFIG.highlight
+    if (!highLight) return
+
+    const { highlightCopy, highlightLang, highlightHeightLimit, highlightFullpage, highlightMacStyle, plugin } = highLight
+    const isHighlightShrink = GLOBAL_CONFIG_SITE.isHighlightShrink
+    const isShowTool = highlightCopy || highlightLang || isHighlightShrink !== undefined || highlightFullpage || highlightMacStyle
+    const isNotHighlightJs = plugin !== 'highlight.js'
+    const isPrismjs = plugin === 'prismjs'
+    const $figureHighlight = isNotHighlightJs
+      ? Array.from(document.querySelectorAll('code[class*="language-"]')).map(code => code.parentElement)
+      : document.querySelectorAll('figure.highlight')
+
+    if (!((isShowTool || highlightHeightLimit) && $figureHighlight.length)) return
+
+    const highlightShrinkClass = isHighlightShrink === true ? 'closed' : ''
+    const highlightShrinkEle = isHighlightShrink !== undefined ? '<i class="fas fa-angle-down expand"></i>' : ''
+    const highlightCopyEle = highlightCopy ? '<i class="fas fa-paste copy-button"></i>' : ''
+    const highlightMacStyleEle = '<div class="macStyle"><div class="mac-close"></div><div class="mac-minimize"></div><div class="mac-maximize"></div></div>'
+    const highlightFullpageEle = highlightFullpage ? '<i class="fa-solid fa-up-right-and-down-left-from-center fullpage-button"></i>' : ''
+
+    const alertInfo = (ele, text) => {
+      if (GLOBAL_CONFIG.Snackbar !== undefined) {
+        btf.snackbarShow(text)
       } else {
-        alert(GLOBAL_CONFIG.bookmark.message_prev + ' ' + (navigator.userAgent.toLowerCase().indexOf('mac') != -1 ? 'Command/Cmd' : 'CTRL') + '+ D ' + GLOBAL_CONFIG.bookmark.message_next + '.');
+        const newEle = document.createElement('div')
+        newEle.className = 'copy-notice'
+        newEle.textContent = text
+        document.body.appendChild(newEle)
+
+        const buttonRect = ele.getBoundingClientRect()
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+        // X-axis boundary check
+        const halfWidth = newEle.offsetWidth / 2
+        const centerLeft = buttonRect.left + scrollLeft + buttonRect.width / 2
+        const finalLeft = Math.max(halfWidth + 10, Math.min(window.innerWidth - halfWidth - 10, centerLeft))
+
+        // Show tooltip below button if too close to top
+        const normalTop = buttonRect.top + scrollTop - 40
+        const shouldShowBelow = buttonRect.top < 60 || normalTop < 10
+
+        const topValue = shouldShowBelow ? buttonRect.top + scrollTop + buttonRect.height + 10 : normalTop
+
+        newEle.style.cssText = `
+      top: ${topValue + 10}px;
+      left: ${finalLeft}px;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s ease, top 0.3s ease;
+    `
+
+        requestAnimationFrame(() => {
+          newEle.style.opacity = '1'
+          newEle.style.top = `${topValue}px`
+        })
+
+        setTimeout(() => {
+          newEle.style.opacity = '0'
+          newEle.style.top = `${topValue + 10}px`
+          setTimeout(() => {
+            newEle?.remove()
+          }, 300)
+        }, 800)
       }
     }
-  });
 
-  /**
-   * 代碼copy
-   * Add copy icon
-   */
-  $('figure.highlight').wrap('<div class="code-area-wrap"></div>')
-
-  var highlight_copy = GLOBAL_CONFIG.highlight_copy
-  if (highlight_copy == 'true') {
-    var $copyIcon = $('<i class="fa fa-clipboard" aria-hidden="true"></i>')
-    var $notice = $('<div class="copy-notice"></div>')
-    $('.code-area-wrap').prepend($copyIcon)
-    $('.code-area-wrap').prepend($notice)
-    // copy function
-    function copy(text, ctx) {
-      if (document.queryCommandSupported && document.queryCommandSupported('copy')) {
-        try {
-          document.execCommand('copy') // Security exception may be thrown by some browsers.
-          if (is_Snackbar) {
-            snackbarShow(GLOBAL_CONFIG.copy.success)
-          } else {
-            $(ctx).prev('.copy-notice')
-              .text(GLOBAL_CONFIG.copy.success)
-              .animate({
-                opacity: 1,
-                right: 30
-              }, 450, function () {
-                setTimeout(function () {
-                  $(ctx).prev('.copy-notice').animate({
-                    opacity: 0,
-                    right: 0
-                  }, 650)
-                }, 400)
-              })
-          }
-        } catch (ex) {
-          if (is_Snackbar) {
-            snackbarShow(GLOBAL_CONFIG.copy.success)
-          } else {
-            $(ctx).prev('.copy-notice')
-              .text(GLOBAL_CONFIG.copy.error)
-              .animate({
-                opacity: 1,
-                right: 30
-              }, 650, function () {
-                setTimeout(function () {
-                  $(ctx).prev('.copy-notice').animate({
-                    opacity: 0,
-                    right: 0
-                  }, 650)
-                }, 400)
-              })
-            return false
-          }
-        }
-      } else {
-        if (is_Snackbar) {
-          snackbarShow(GLOBAL_CONFIG.copy.noSupport)
-        } else {
-          $(ctx).prev('.copy-notice').text(GLOBAL_CONFIG.copy.noSupport)
-        }
+    const copy = async (text, ctx) => {
+      try {
+        await navigator.clipboard.writeText(text)
+        alertInfo(ctx, GLOBAL_CONFIG.copy.success)
+      } catch (err) {
+        console.error('Failed to copy: ', err)
+        alertInfo(ctx, GLOBAL_CONFIG.copy.noSupport)
       }
     }
+
     // click events
-    $('.code-area-wrap .fa-clipboard').on('click', function () {
-      var selection = window.getSelection()
-      var range = document.createRange()
-      range.selectNodeContents($(this).siblings('figure').find('.code pre')[0])
-      selection.removeAllRanges()
-      selection.addRange(range)
-      var text = selection.toString()
-      copy(text, this)
-      selection.removeAllRanges()
-    })
-  }
-
-  /**
-   * 代碼框語言識別
-   */
-  var highlight_lang = GLOBAL_CONFIG.highlight_lang
-  if (highlight_lang == 'true') {
-    var $highlight_lang = $('<div class="code_lang"></div>')
-    $('figure').before($highlight_lang)
-    var lang_name_index
-    var lang_name
-    $('figure').each(function () {
-      lang_name_index = lang_name = $(this).attr('class').split(' ')[1];
-      if (lang_name_index == 'js')
-        lang_name = 'javascript'
-      if (lang_name_index == 'md')
-        lang_name = 'markdown'
-      if (lang_name_index == 'plain')
-        lang_name = 'code'
-      if (lang_name_index == 'py')
-        lang_name = 'python'
-
-      $(this).siblings(".code_lang").text(lang_name)
-
-    })
-  }
-  /**
-   * 代碼收縮
-   */
-  var highlight_shrink = GLOBAL_CONFIG.highlight_shrink
-  if (highlight_shrink == 'true') {
-    var $code_expand = $('<i class="fa fa-angle-down code-expand code-closed" aria-hidden="true"></i>')
-  } else {
-    var $code_expand = $('<i class="fa fa-angle-down code-expand" aria-hidden="true"></i>')
-  }
-  $('.code-area-wrap').prepend($code_expand)
-  $('.code-area-wrap .code-expand').on('click', function () {
-    if ($(this).hasClass('code-closed')) {
-      $(this).siblings('figure').find('figcaption').show();
-      $(this).siblings('figure').find('table').show();
-      $(this).removeClass('code-closed');
-    } else {
-      $(this).siblings('figure').find('figcaption').hide();
-      $(this).siblings('figure').find('table').hide();
-      $(this).addClass('code-closed');
-    }
-  })
-
-  /**
-   * fancybox和 medium_zoom 
-   */
-
-  var medium_zoom = GLOBAL_CONFIG.medium_zoom;
-  if (medium_zoom == 'false') {
-    var imgList = $("#post-content img").not('.no-fancybox');
-    if (imgList.length === 0) {
-      imgList = $(".justified-gallery img").not('.no-fancybox');
+    const highlightCopyFn = (ele, clickEle) => {
+      const $buttonParent = ele.parentNode
+      $buttonParent.classList.add('copy-true')
+      const preCodeSelector = isNotHighlightJs ? 'pre code' : 'table .code pre'
+      const codeElement = $buttonParent.querySelector(preCodeSelector)
+      if (!codeElement) return
+      copy(codeElement.innerText, clickEle)
+      $buttonParent.classList.remove('copy-true')
     }
 
-    for (var i = 0; i < imgList.length; i++) {
-      var lazyload_src = imgList[i].src ? imgList[i].src : imgList.eq(i).attr("data-src")
+    const highlightShrinkFn = ele => ele.classList.toggle('closed')
 
-      var $a = $(
-        '<a href="' +
-        lazyload_src +
-        '" data-fancybox="group" data-caption="' +
-        imgList[i].alt +
-        '" class="fancybox"></a>'
-      )
+    const codeFullpage = (item, clickEle) => {
+      const wrapEle = item.closest('figure.highlight')
+      const isFullpage = wrapEle.classList.toggle('code-fullpage')
 
-      var $wrap = $(imgList[i]).wrap($a)
-
-      var alt = imgList[i].alt
-      if (alt) {
-        $wrap.after('<div class="img-alt">' + alt + '</div>')
-      }
+      document.body.style.overflow = isFullpage ? 'hidden' : ''
+      clickEle.classList.toggle('fa-down-left-and-up-right-to-center', isFullpage)
+      clickEle.classList.toggle('fa-up-right-and-down-left-from-center', !isFullpage)
     }
 
-    $().fancybox({
-      selector: "[data-fancybox]",
-      loop: true,
-      transitionEffect: "slide",
-      protect: true,
-      // wheel: false,
-      buttons: ["slideShow", "fullScreen", "thumbs", "close"]
-    });
-  } else {
-    var imgList = $(".justified-gallery img");
-    if (imgList.length) {
-      for (var i = 0; i < imgList.length; i++) {
-        var $a = $('<div></div>')
-        var $wrap = $(imgList[i]).wrap($a)
-      }
+    const highlightToolsFn = e => {
+      const $target = e.target.classList
+      const currentElement = e.currentTarget
+      if ($target.contains('expand')) highlightShrinkFn(currentElement)
+      else if ($target.contains('copy-button')) highlightCopyFn(currentElement, e.target)
+      else if ($target.contains('fullpage-button')) codeFullpage(currentElement, e.target)
     }
 
-    const zoom = mediumZoom(document.querySelectorAll('#post img,.justified-gallery img'))
-    zoom.on('open', event => {
-      let photoBg = $(document.documentElement).attr('data-theme') == 'dark' ? '#2d3032' : '#fff'
-      zoom.update({ background: photoBg })
-    })
-  }
+    const expandCode = e => e.currentTarget.classList.toggle('expand-done')
 
+    // 獲取隱藏狀態下元素的真實高度
+    const getActualHeight = item => {
+      if (item.offsetHeight > 0) return item.offsetHeight
+      const hiddenElements = new Map()
 
-  /**
-   * 手機menu和toc按鈕點擊
-   * 顯示menu和toc的sidebar
-   */
-  function mobile_menu_close() {
-    if ($(".toggle-menu").hasClass("open")) {
-      $(".toggle-menu").removeClass("open").addClass("close");
-      $('body').removeClass("open-mobile-menus");
-      $('#menu_mask').fadeOut()
-    }
+      const fix = () => {
+        let current = item
+        while (current !== document.body && current != null) {
+          if (window.getComputedStyle(current).display === 'none') {
+            hiddenElements.set(current, current.getAttribute('style') || '')
+          }
+          current = current.parentNode
+        }
 
-  }
-
-  function mobile_toc_close() {
-    if ($("#mobile-toc-button").hasClass("open")) {
-      $("#mobile-toc-button").removeClass("open").addClass("close");
-      $('body').removeClass("open-mobile-toc");
-      $('#menu_mask').fadeOut();
-    }
-
-  }
-  $('.toggle-menu').on('click', function () {
-    if ($(".toggle-menu").hasClass("close")) {
-      $(".toggle-menu").removeClass("close").addClass("open");
-      $('body').addClass("open-mobile-menus");
-      $('#menu_mask').fadeIn();
-      if ($('#toggle-sidebar').hasClass('on')) {
-        close_sidebar()
-      }
-    }
-
-  })
-
-  $('#mobile-toc-button').on('click', function () {
-    if ($("#mobile-toc-button").hasClass("close")) {
-      $("#mobile-toc-button").removeClass("close").addClass("open");
-      $('body').addClass("open-mobile-toc");
-      $('#menu_mask').fadeIn();
-    }
-
-  })
-
-  $('#menu_mask').on('click touchstart', function (e) {
-    mobile_menu_close()
-    mobile_toc_close()
-
-    if ($('#toggle-sidebar').hasClass('on')) {
-      setTimeout(function () {
-        open_sidebar()
-      }, 300)
-    }
-
-  })
-
-  $(window).on('resize', function (e) {
-    if (!$('.toggle-menu').is(':visible')) {
-      mobile_menu_close()
-    }
-    if (!$('#mobile-toc-button').is(':visible')) {
-      mobile_toc_close()
-    }
-
-  })
-
-  //點擊toc，收起sidebar
-  $("#mobile-sidebar-toc a").on('click', function () {
-    mobile_toc_close()
-  })
-
-  /**
-   *  scroll 滚动 toc
-   */
-  var initTop = 0
-  $('.toc-child').hide()
-
-  // main of scroll
-  $(window).scroll(throttle(function (event) {
-    var currentTop = $(this).scrollTop()
-    if (!isMobile()) {
-      // percentage inspired by hexo-theme-next
-      scrollPercent(currentTop)
-      // head position
-      findHeadPosition(currentTop)
-      auto_scroll_toc(currentTop)
-    }
-    var isUp = scrollDirection(currentTop)
-
-    if (currentTop > 56) {
-      if (isUp) {
-        $('#page-header').hasClass('visible') ? $('#page-header').removeClass('visible') : ''
-
-      } else {
-        $('#page-header').hasClass('visible') ? '' : $('#page-header').addClass('visible')
-      }
-      $('#page-header').addClass('fixed')
-
-      if ($('#rightside').css('opacity') === '0') {
-        $('#rightside').animate({}, function () {
-          $(this).css({
-            'opacity': '1',
-            'transform': 'translateX(-38px)'
-          })
+        const style = 'visibility: hidden !important; display: block !important;'
+        hiddenElements.forEach((originalStyle, elem) => {
+          elem.setAttribute('style', originalStyle ? originalStyle + ';' + style : style)
         })
       }
-    } else {
-      if (currentTop === 0) {
-        $('#page-header').removeClass('fixed').removeClass('visible')
-      }
 
-      $('#rightside').animate({}, function () {
-        $('#rightside').css({
-          'opacity': '',
-          'transform': ''
+      const restore = () => {
+        hiddenElements.forEach((originalStyle, elem) => {
+          if (originalStyle === '') elem.removeAttribute('style')
+          else elem.setAttribute('style', originalStyle)
         })
-      })
-
-    }
-
-  }, 300))
-
-  // go up smooth scroll
-  $('#go-up').on('click', function () {
-    scrollTo('body')
-  })
-
-  // head scroll
-  // $('#post-content').find('h1,h2,h3,h4,h5,h6').on('click', function (e) {
-  //   scrollToHead('#' + $(this).attr('id'))
-  // })
-
-  // head scroll
-  $('.toc-link').on('click', function (e) {
-    e.preventDefault()
-    scrollToHead($(this).attr('href'))
-  })
-
-  // find the scroll direction
-  function scrollDirection(currentTop) {
-    var result = currentTop > initTop // true is down & false is up
-    initTop = currentTop
-    return result
-  }
-
-  // scroll to a head(anchor)
-  function scrollToHead(anchor) {
-    scrollTo(anchor);
-  }
-
-  // expand toc-item
-  function expandToc($item) {
-    if ($item.is(':visible')) {
-      return
-    }
-    $item.fadeIn(400)
-  }
-
-  function scrollPercent(currentTop) {
-    var docHeight = $('#content-outer').height()
-    var winHeight = $(window).height()
-    var contentMath = (docHeight > winHeight) ? (docHeight - winHeight) : ($(document).height() - winHeight)
-    var scrollPercent = (currentTop) / (contentMath)
-    var scrollPercentRounded = Math.round(scrollPercent * 100)
-    var percentage = (scrollPercentRounded > 100) ? 100 : scrollPercentRounded
-    $('.progress-num').text(percentage)
-    $('.sidebar-toc__progress-bar').animate({
-      width: percentage + '%'
-    }, 100)
-  }
-
-  function updateAnchor(anchor) {
-    if (window.history.replaceState && anchor !== window.location.hash) {
-      window.history.replaceState(undefined, undefined, anchor)
-    }
-  }
-
-  // find head position & add active class
-  // DOM Hierarchy:
-  // ol.toc > (li.toc-item, ...)
-  // li.toc-item > (a.toc-link, ol.toc-child > (li.toc-item, ...))
-  function findHeadPosition(top) {
-    // assume that we are not in the post page if no TOC link be found,
-    // thus no need to update the status
-    if ($('.toc-link').length === 0) {
-      return false
-    }
-
-    var list = $('#post-content').find('h1,h2,h3,h4,h5,h6')
-    var currentId = ''
-    list.each(function () {
-      var head = $(this)
-      if (top > head.offset().top - 25) {
-        currentId = '#' + $(this).attr('id')
       }
-    })
 
-    if (currentId === '') {
-      $('.toc-link').removeClass('active')
-      $('.toc-child').hide()
+      fix()
+      const height = item.offsetHeight
+      restore()
+      return height
     }
 
-    var currentActive = $('.toc-link.active')
-    if (currentId && currentActive.attr('href') !== currentId) {
-      updateAnchor(currentId)
+    const createEle = (lang, item) => {
+      const fragment = document.createDocumentFragment()
 
-      $('.toc-link').removeClass('active')
-      var _this = $('.toc-link[href="' + currentId + '"]')
-      _this.addClass('active')
-
-      var parents = _this.parents('.toc-child')
-      // Returned list is in reverse order of the DOM elements
-      // Thus `parents.last()` is the outermost .toc-child container
-      // i.e. list of subsections
-      var topLink = (parents.length > 0) ? parents.last() : _this
-      expandToc(topLink.closest('.toc-item').find('.toc-child'))
-      topLink
-        // Find all top-level .toc-item containers, i.e. sections
-        // excluding the currently active one
-        .closest('.toc-item').siblings('.toc-item')
-        // Hide their respective list of subsections
-        .find('.toc-child').hide()
-    }
-
-  }
-
-  function auto_scroll_toc(currentTop) {
-    if ($('.toc-link').hasClass('active')) {
-      var active_position = $(".active").offset().top;
-      var sidebar_scrolltop = $("#sidebar").scrollTop();
-      if (active_position > (currentTop + $(window).height() - 50)) {
-        $("#sidebar").scrollTop(sidebar_scrolltop + 100);
-      } else if (active_position < currentTop + 50) {
-        $("#sidebar").scrollTop(sidebar_scrolltop - 100);
+      if (isShowTool) {
+        const hlTools = document.createElement('div')
+        hlTools.className = `highlight-tools ${highlightShrinkClass}`
+        hlTools.innerHTML = highlightMacStyleEle + highlightShrinkEle + lang + highlightCopyEle + highlightFullpageEle
+        btf.addEventListenerPjax(hlTools, 'click', highlightToolsFn)
+        fragment.appendChild(hlTools)
       }
+
+      if (highlightHeightLimit && getActualHeight(item) > highlightHeightLimit + 30) {
+        const ele = document.createElement('div')
+        ele.className = 'code-expand-btn'
+        ele.innerHTML = '<i class="fas fa-angle-double-down"></i>'
+        btf.addEventListenerPjax(ele, 'click', expandCode)
+        fragment.appendChild(ele)
+      }
+
+      isNotHighlightJs ? item.parentNode.insertBefore(fragment, item) : item.insertBefore(fragment, item.firstChild)
     }
-  }
 
-  /**
-   * 閲讀模式
-   */
-  $("#readmode").click(function () {
-    if (Cookies.get("theme") == "dark") {
-      $(document.documentElement).attr('data-theme') == 'dark' ? $(document.documentElement).attr('data-theme','') : $(document.documentElement).attr('data-theme','dark')
-      $('body').toggleClass('read-mode');
-      $('#to_comment').toggleClass('is_invisible');
-    } else {
-      $('body').toggleClass('read-mode');
-      $('#to_comment').toggleClass('is_invisible');
-    }
-  });
+    $figureHighlight.forEach(item => {
+      let langName = ''
+      if (isNotHighlightJs) {
+        const newClassName = isPrismjs ? 'prismjs' : 'default'
+        btf.wrap(item, 'figure', { class: `highlight ${newClassName}` })
+      }
 
-  /**
-   * 字體調整
-   */
-  $("#font_plus").click(function () {
-    var font_size_record = parseFloat($('body').css('font-size'))
-    var pre_size_record = parseFloat($('pre').css('font-size'))
-    var code_size_record = parseFloat($('code').css('font-size'))
-    $('body').css('font-size', font_size_record + 1)
-    $('pre').css('font-size', pre_size_record + 1)
-    $('code').css('font-size', code_size_record + 1)
-  });
+      if (!highlightLang) {
+        createEle('', item)
+        return
+      }
 
-  $("#font_minus").click(function () {
-    var font_size_record = parseFloat($('body').css('font-size'))
-    var pre_size_record = parseFloat($('pre').css('font-size'))
-    var code_size_record = parseFloat($('code').css('font-size'))
-    $('body').css('font-size', font_size_record - 1)
-    $('pre').css('font-size', pre_size_record - 1)
-    $('code').css('font-size', code_size_record - 1)
-  });
-
-  /**
-   * sub-menus 位置調整
-   */
-
-  if ($(window).width() > 768) {
-    $('.menus_item_child').each(function () {
-      var a_width = $(this).siblings('a').outerWidth(true);
-      var child_width = $(this).outerWidth(true);
-      $(this).css("margin-left", -(child_width / 2 - a_width / 2))
-    })
-  }
-
-  /**
-   * 手機端sub-menu 展開/收縮
-   */
-  $('.menus-expand').on('click', function () {
-    if ($(this).hasClass('menus-closed')) {
-      $(this).parents('.menus_item').find('.menus_item_child').slideDown();
-      $(this).removeClass('menus-closed');
-    } else {
-      $(this).parents('.menus_item').find('.menus_item_child').slideUp();
-      $(this).addClass('menus-closed');
-    }
-  })
-
-  /**
-   * rightside 點擊設置 按鈕 展開
-   */
-  $('#rightside_config').on('click', function () {
-    if ($('#rightside-config-hide').hasClass("rightside-in")) {
-      $('#rightside-config-hide').css("animation", "rightside_out_animate .3s");
-      $('#rightside-config-hide').removeClass("rightside-in")
-      $("#rightside-config-hide").animate({}, function () {
-        setTimeout(function () {
-          $('#rightside-config-hide').css({
-            "animation": "",
-            "display": ""
-          })
-        }, 300)
-      })
-    } else {
-      $('#rightside-config-hide').addClass("rightside-in")
-      $("#rightside-config-hide").animate({}, function () {
-        $('#rightside-config-hide').css("display", "block")
-      })
-
-    }
-  })
-
-  /**
-   * 調正recent_post 上下間距
-   */
-  function recent_post_padding() {
-    $(".recent-post-info").each(function () {
-      var k = $(".recent-post-item").height();
-      var e = $(this).height();
-      $(this).css({
-        "padding-top": (k - e) / 2,
-        "padding-bottom": (k - e) / 2
-      })
-    })
-  }
-
-  //recent-post-item垂直置中
-  if ($(window).width() > 768) {
-    recent_post_padding();
-  }
-
-  $(window).bind("resize", function () {
-    if ($(window).width() > 768) {
-      recent_post_padding();
-    }
-  })
-
-  /**
-   * 複製時加上版權信息
-   */
-  var copy_copyright_js = GLOBAL_CONFIG.copy_copyright_js
-  var copyright = GLOBAL_CONFIG.copyright
-  if (copyright) {
-    document.body.oncopy = event => {
-      event.preventDefault();
-      let textFont, copyFont = window.getSelection(0).toString();
-      if (copyFont.length > 45) {
-        textFont = copyFont + '\n' + '\n' + '\n' +
-          copyright.languages.author + '\n' +
-          copyright.languages.link + '\n' +
-          copyright.languages.source + '\n' +
-          copyright.languages.info;
+      if (isNotHighlightJs) {
+        langName = isPrismjs ? item.getAttribute('data-language') || 'Code' : item.querySelector('code').getAttribute('class').replace('language-', '')
       } else {
-        textFont = copyFont;
+        langName = item.getAttribute('class').split(' ')[1]
+        if (langName === 'plain' || langName === undefined) langName = 'Code'
       }
-      if (event.clipboardData) {
-        return event.clipboardData.setData('text', textFont);
-      } else {
-        // 兼容IE
-        return window.clipboardData.setData("text", textFont);
-      }
-    }
+      createEle(`<div class="code-lang">${langName}</div>`, item)
+    })
+  }
+
+  /**
+   * PhotoFigcaption
+   */
+  const addPhotoFigcaption = () => {
+    if (!GLOBAL_CONFIG.isPhotoFigcaption) return
+    document.querySelectorAll('#article-container img').forEach(item => {
+      const altValue = item.title || item.alt
+      if (!altValue) return
+      const ele = document.createElement('div')
+      ele.className = 'img-alt text-center'
+      ele.textContent = altValue
+      item.insertAdjacentElement('afterend', ele)
+    })
+  }
+
+  /**
+   * Lightbox
+   */
+  const runLightbox = () => {
+    btf.loadLightbox(document.querySelectorAll('#article-container img:not(.no-lightbox)'))
   }
 
   /**
    * justified-gallery 圖庫排版
    */
 
-  if ($('.justified-gallery').length) {
-    $('.justified-gallery img').each((i, o) => {
-      let src = $(o).attr('data-src');
-      $(o).attr('src', src)
-    })
-    $('.justified-gallery > p > .fancybox,.justified-gallery > p > div').unwrap();
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css">');
-    loadScript("https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js", function () {
-      if (typeof ($.fn.justifiedGallery) === 'function') {
-        $('.justified-gallery').justifiedGallery({
-          rowHeight: 220,
-          margins: 4,
-        });
+  const fetchUrl = async url => {
+    try {
+      const response = await fetch(url)
+      return await response.json()
+    } catch (error) {
+      console.error('Failed to fetch URL:', error)
+      return []
+    }
+  }
+
+  const runJustifiedGallery = (container, data, config) => {
+    const { isButton, limit, firstLimit, tabs } = config
+
+    const dataLength = data.length
+    const maxGroupKey = Math.ceil((dataLength - firstLimit) / limit + 1)
+
+    // Gallery configuration
+    const igConfig = {
+      gap: 5,
+      isConstantSize: true,
+      sizeRange: [150, 600],
+      // useResizeObserver: true,
+      // observeChildren: true,
+      useTransform: true
+      // useRecycle: false
+    }
+
+    const ig = new InfiniteGrid.JustifiedInfiniteGrid(container, igConfig)
+    let isLayoutHidden = false
+
+    // Utility functions
+    const sanitizeString = str => (str && str.replace(/"/g, '&quot;')) || ''
+
+    const createImageItem = item => {
+      const alt = item.alt ? `alt="${sanitizeString(item.alt)}"` : ''
+      const title = item.title ? `title="${sanitizeString(item.title)}"` : ''
+      return `<div class="item">
+        <img src="${item.url}" data-grid-maintained-target="true" ${alt} ${title} />
+      </div>`
+    }
+
+    const getItems = (nextGroupKey, count, isFirst = false) => {
+      const startIndex = isFirst ? (nextGroupKey - 1) * count : (nextGroupKey - 2) * count + firstLimit
+      return data.slice(startIndex, startIndex + count).map(createImageItem)
+    }
+
+    // Load more button
+    const addLoadMoreButton = container => {
+      const button = document.createElement('button')
+      button.innerHTML = `${GLOBAL_CONFIG.infinitegrid.buttonText}<i class="fa-solid fa-arrow-down"></i>`
+
+      button.addEventListener('click', () => {
+        button.remove()
+        btf.setLoading.add(container)
+        appendItems(ig.getGroups().length + 1, limit)
+      }, { once: true })
+
+      container.insertAdjacentElement('afterend', button)
+    }
+
+    const appendItems = (nextGroupKey, count, isFirst) => {
+      ig.append(getItems(nextGroupKey, count, isFirst), nextGroupKey)
+    }
+
+    // Event handlers
+    const handleRenderComplete = e => {
+      if (tabs) {
+        const parentNode = container.parentNode
+        if (isLayoutHidden) {
+          parentNode.style.visibility = 'visible'
+        }
+        if (container.offsetHeight === 0) {
+          parentNode.style.visibility = 'hidden'
+          isLayoutHidden = true
+        }
+      }
+
+      const { updated, isResize, mounted } = e
+      if (!updated.length || !mounted.length || isResize) return
+
+      btf.loadLightbox(container.querySelectorAll('img:not(.medium-zoom-image)'))
+
+      if (ig.getGroups().length === maxGroupKey) {
+        btf.setLoading.remove(container)
+        !tabs && ig.off('renderComplete', handleRenderComplete)
+        return
+      }
+
+      if (isButton) {
+        btf.setLoading.remove(container)
+        addLoadMoreButton(container)
+      }
+    }
+
+    const handleRequestAppend = btf.debounce(e => {
+      const nextGroupKey = (+e.groupKey || 0) + 1
+
+      if (nextGroupKey === 1) appendItems(nextGroupKey, firstLimit, true)
+      else appendItems(nextGroupKey, limit)
+
+      if (nextGroupKey === maxGroupKey) ig.off('requestAppend', handleRequestAppend)
+    }, 300)
+
+    btf.setLoading.add(container)
+    ig.on('renderComplete', handleRenderComplete)
+
+    if (isButton) {
+      appendItems(1, firstLimit, true)
+    } else {
+      ig.on('requestAppend', handleRequestAppend)
+      ig.renderItems()
+    }
+
+    btf.addGlobalFn('pjaxSendOnce', () => ig.destroy())
+  }
+
+  const addJustifiedGallery = async (elements, tabs = false) => {
+    if (!elements.length) return
+
+    const initGallery = async () => {
+      for (const element of elements) {
+        if (btf.isHidden(element) || element.classList.contains('loaded')) continue
+
+        const config = {
+          isButton: element.getAttribute('data-button') === 'true',
+          limit: parseInt(element.getAttribute('data-limit'), 10),
+          firstLimit: parseInt(element.getAttribute('data-first'), 10),
+          tabs
+        }
+
+        const container = element.firstElementChild
+        const content = container.textContent
+        container.textContent = ''
+        element.classList.add('loaded')
+
+        try {
+          const data = element.getAttribute('data-type') === 'url' ? await fetchUrl(content) : JSON.parse(content)
+          runJustifiedGallery(container, data, config)
+        } catch (error) {
+          console.error('Gallery data parsing failed:', error)
+        }
+      }
+    }
+
+    if (typeof InfiniteGrid === 'function') {
+      await initGallery()
+    } else {
+      await btf.getScript(GLOBAL_CONFIG.infinitegrid.js)
+      await initGallery()
+    }
+  }
+
+  /**
+   * rightside scroll percent
+   */
+  const rightsideScrollPercent = currentTop => {
+    const scrollPercent = btf.getScrollPercent(currentTop, document.body)
+    const goUpElement = document.getElementById('go-up')
+
+    if (scrollPercent < 95) {
+      goUpElement.classList.add('show-percent')
+      goUpElement.querySelector('.scroll-percent').textContent = scrollPercent
+    } else {
+      goUpElement.classList.remove('show-percent')
+    }
+  }
+
+  /**
+   * 滾動處理
+   */
+  const scrollFn = () => {
+    const $rightside = document.getElementById('rightside')
+    const innerHeight = window.innerHeight + 56
+    let initTop = 0
+    const $header = document.getElementById('page-header')
+    const isChatBtn = typeof chatBtn !== 'undefined'
+    const isShowPercent = GLOBAL_CONFIG.percent.rightside
+
+    // 檢查文檔高度是否小於視窗高度
+    const checkDocumentHeight = () => {
+      if (document.body.scrollHeight <= innerHeight) {
+        $rightside.classList.add('rightside-show')
+        return true
+      }
+      return false
+    }
+
+    // 如果文檔高度小於視窗高度,直接返回
+    if (checkDocumentHeight()) return
+
+    // find the scroll direction
+    const scrollDirection = currentTop => {
+      const result = currentTop > initTop // true is down & false is up
+      initTop = currentTop
+      return result
+    }
+
+    let flag = ''
+    const scrollTask = btf.throttle(() => {
+      const currentTop = window.scrollY || document.documentElement.scrollTop
+      const isDown = scrollDirection(currentTop)
+      if (currentTop > 56) {
+        if (flag === '') {
+          $header.classList.add('nav-fixed')
+          $rightside.classList.add('rightside-show')
+        }
+
+        if (isDown) {
+          if (flag !== 'down') {
+            $header.classList.remove('nav-visible')
+            isChatBtn && window.chatBtn.hide()
+            flag = 'down'
+          }
+        } else {
+          if (flag !== 'up') {
+            $header.classList.add('nav-visible')
+            isChatBtn && window.chatBtn.show()
+            flag = 'up'
+          }
+        }
+      } else {
+        flag = ''
+        if (currentTop === 0) {
+          $header.classList.remove('nav-fixed', 'nav-visible')
+        }
+        $rightside.classList.remove('rightside-show')
+      }
+
+      isShowPercent && rightsideScrollPercent(currentTop)
+      checkDocumentHeight()
+    }, 300)
+
+    btf.addEventListenerPjax(window, 'scroll', scrollTask, { passive: true })
+  }
+
+  /**
+  * toc,anchor
+  */
+  const scrollFnToDo = () => {
+    const isToc = GLOBAL_CONFIG_SITE.isToc
+    const isAnchor = GLOBAL_CONFIG.isAnchor
+    const $article = document.getElementById('article-container')
+
+    if (!($article && (isToc || isAnchor))) return
+
+    let $tocLink, $cardToc, autoScrollToc, $tocPercentage, isExpand
+
+    if (isToc) {
+      const $cardTocLayout = document.getElementById('card-toc')
+      $cardToc = $cardTocLayout.querySelector('.toc-content')
+      $tocLink = $cardToc.querySelectorAll('.toc-link')
+      $tocPercentage = $cardTocLayout.querySelector('.toc-percentage')
+      isExpand = $cardToc.classList.contains('is-expand')
+
+      // toc元素點擊
+      const tocItemClickFn = e => {
+        const target = e.target.closest('.toc-link')
+        if (!target) return
+
+        e.preventDefault()
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(target.getAttribute('href')).replace('#', ''))), 300)
+        if (window.innerWidth < 900) {
+          $cardTocLayout.classList.remove('open')
+        }
+      }
+
+      btf.addEventListenerPjax($cardToc, 'click', tocItemClickFn)
+
+      autoScrollToc = item => {
+        const sidebarHeight = $cardToc.clientHeight
+        const itemOffsetTop = item.offsetTop
+        const itemHeight = item.clientHeight
+        const scrollTop = $cardToc.scrollTop
+        const offset = itemOffsetTop - scrollTop
+        const middlePosition = (sidebarHeight - itemHeight) / 2
+
+        if (offset !== middlePosition) {
+          $cardToc.scrollTop = scrollTop + (offset - middlePosition)
+        }
+      }
+
+      // 處理 hexo-blog-encrypt 事件
+      $cardToc.style.display = 'block'
+    }
+
+    // find head position & add active class
+    const $articleList = $article.querySelectorAll('h1,h2,h3,h4,h5,h6')
+    let detectItem = ''
+
+    // Optimization: Cache header positions
+    let headerList = []
+    const updateHeaderPositions = () => {
+      headerList = Array.from($articleList).map(ele => ({
+        ele,
+        top: btf.getEleTop(ele),
+        id: ele.id
+      }))
+    }
+
+    updateHeaderPositions()
+    btf.addEventListenerPjax(window, 'resize', btf.throttle(updateHeaderPositions, 200))
+
+    const findHeadPosition = top => {
+      if (top === 0) return false
+
+      let currentId = ''
+      let currentIndex = ''
+
+      for (let i = 0; i < headerList.length; i++) {
+        const item = headerList[i]
+        if (top > item.top - 80) {
+          currentId = item.id ? '#' + encodeURI(item.id) : ''
+          currentIndex = i
+        } else {
+          break
+        }
+      }
+
+      if (detectItem === currentIndex) return
+
+      if (isAnchor) btf.updateAnchor(currentId)
+
+      detectItem = currentIndex
+
+      if (isToc) {
+        $cardToc.querySelectorAll('.active').forEach(i => i.classList.remove('active'))
+
+        if (currentId) {
+          const currentActive = $tocLink[currentIndex]
+          currentActive.classList.add('active')
+
+          setTimeout(() => autoScrollToc(currentActive), 0)
+
+          if (!isExpand) {
+            let parent = currentActive.parentNode
+            while (!parent.matches('.toc')) {
+              if (parent.matches('li')) parent.classList.add('active')
+              parent = parent.parentNode
+            }
+          }
+        }
+      }
+    }
+
+    // main of scroll
+    const tocScrollFn = btf.throttle(() => {
+      const currentTop = window.scrollY || document.documentElement.scrollTop
+      if (isToc && GLOBAL_CONFIG.percent.toc) {
+        $tocPercentage.textContent = btf.getScrollPercent(currentTop, $article)
+      }
+      findHeadPosition(currentTop)
+    }, 100)
+
+    btf.addEventListenerPjax(window, 'scroll', tocScrollFn, { passive: true })
+  }
+
+  const handleThemeChange = mode => {
+    const globalFn = window.globalFn || {}
+    const themeChange = globalFn.themeChange || {}
+    if (!themeChange) {
+      return
+    }
+
+    Object.keys(themeChange).forEach(key => {
+      const themeChangeFn = themeChange[key]
+      if (['disqus', 'disqusjs'].includes(key)) {
+        setTimeout(() => themeChangeFn(mode), 300)
+      } else {
+        themeChangeFn(mode)
       }
     })
   }
 
   /**
-   * Darkmode
+   * Rightside
    */
+  const rightSideFn = {
+    readmode: () => { // read mode
+      const $body = document.body
+      const newEle = document.createElement('button')
 
-  // if (autoChangeMode == '1') {
-  //   window.matchMedia("(prefers-color-scheme: dark)").addListener(function (e) {
-  //     if (e.matches) {
-  //       activateDarkMode()
-  //       change_light_icon()
-  //       Cookies.remove('theme')
-  //     } else {
-  //       activateLightMode()
-  //       change_dark_icon()
-  //       Cookies.remove('theme')
-  //     }
-  
-  //   })
-  // }
+      const exitReadMode = () => {
+        $body.classList.remove('read-mode')
+        newEle.remove()
+        newEle.removeEventListener('click', exitReadMode)
+      }
 
-  if (autoChangeMode == '1' || autoChangeMode == '2') {
-    if (Cookies.get("theme") == "dark") {
-      change_light_icon()
+      $body.classList.add('read-mode')
+      newEle.type = 'button'
+      newEle.className = 'exit-readmode'
+      newEle.innerHTML = '<i class="fas fa-sign-out-alt"></i>'
+      newEle.addEventListener('click', exitReadMode)
+      $body.appendChild(newEle)
+    },
+    darkmode: () => { // switch between light and dark mode
+      const willChangeMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+      if (willChangeMode === 'dark') {
+        btf.activateDarkMode()
+        GLOBAL_CONFIG.Snackbar !== undefined && btf.snackbarShow(GLOBAL_CONFIG.Snackbar.day_to_night)
+      } else {
+        btf.activateLightMode()
+        GLOBAL_CONFIG.Snackbar !== undefined && btf.snackbarShow(GLOBAL_CONFIG.Snackbar.night_to_day)
+      }
+      btf.saveToLocal.set('theme', willChangeMode, 2)
+      handleThemeChange(willChangeMode)
+    },
+    'rightside-config': item => { // Show or hide rightside-hide-btn
+      const hideLayout = item.firstElementChild
+      if (hideLayout.classList.contains('show')) {
+        hideLayout.classList.add('status')
+        setTimeout(() => {
+          hideLayout.classList.remove('status')
+        }, 300)
+      }
+
+      hideLayout.classList.toggle('show')
+    },
+    'go-up': () => { // Back to top
+      btf.scrollToDest(0, 500)
+    },
+    'hide-aside-btn': () => { // Hide aside
+      const $htmlDom = document.documentElement.classList
+      const saveStatus = $htmlDom.contains('hide-aside') ? 'show' : 'hide'
+      btf.saveToLocal.set('aside-status', saveStatus, 2)
+      $htmlDom.toggle('hide-aside')
+    },
+    'mobile-toc-button': (p, item) => { // Show mobile toc
+      const tocEle = document.getElementById('card-toc')
+      tocEle.style.transition = 'transform 0.3s ease-in-out'
+
+      const tocEleHeight = tocEle.clientHeight
+      const btData = item.getBoundingClientRect()
+
+      const tocEleBottom = window.innerHeight - btData.bottom - 30
+      if (tocEleHeight > tocEleBottom) {
+        tocEle.style.transformOrigin = `right ${tocEleHeight - tocEleBottom - btData.height / 2}px`
+      }
+
+      tocEle.classList.toggle('open')
+      tocEle.addEventListener('transitionend', () => {
+        tocEle.style.cssText = ''
+      }, { once: true })
+    },
+    'chat-btn': () => { // Show chat
+      window.chatBtnFn()
+    },
+    translateLink: () => { // switch between traditional and simplified chinese
+      window.translateFn.translatePage()
+    }
+  }
+
+  document.getElementById('rightside').addEventListener('click', e => {
+    const $target = e.target.closest('[id]')
+    if ($target && rightSideFn[$target.id]) {
+      rightSideFn[$target.id](e.currentTarget, $target)
+    }
+  })
+
+  /**
+   * menu
+   * 側邊欄sub-menu 展開/收縮
+   */
+  const clickFnOfSubMenu = () => {
+    const handleClickOfSubMenu = e => {
+      const target = e.target.closest('.site-page.group')
+      if (!target) return
+      target.classList.toggle('hide')
+    }
+
+    const menusItems = document.querySelector('#sidebar-menus .menus_items')
+    menusItems && menusItems.addEventListener('click', handleClickOfSubMenu)
+  }
+
+  /**
+   * 手机端目录点击
+   */
+  const openMobileMenu = () => {
+    const toggleMenu = document.getElementById('toggle-menu')
+    if (!toggleMenu) return
+    btf.addEventListenerPjax(toggleMenu, 'click', () => { sidebarFn.open() })
+  }
+
+  /**
+ * 複製時加上版權信息
+ */
+  const addCopyright = () => {
+    const { limitCount, languages } = GLOBAL_CONFIG.copyright
+
+    const handleCopy = e => {
+      e.preventDefault()
+      const copyFont = window.getSelection(0).toString()
+      let textFont = copyFont
+      if (copyFont.length > limitCount) {
+        textFont = `${copyFont}\n\n\n${languages.author}\n${languages.link}${window.location.href}\n${languages.source}\n${languages.info}`
+      }
+      if (e.clipboardData) {
+        return e.clipboardData.setData('text', textFont)
+      } else {
+        return window.clipboardData.setData('text', textFont)
+      }
+    }
+
+    document.body.addEventListener('copy', handleCopy)
+  }
+
+  /**
+   * 網頁運行時間
+   */
+  const addRuntime = () => {
+    const $runtimeCount = document.getElementById('runtimeshow')
+    if ($runtimeCount) {
+      const publishDate = $runtimeCount.getAttribute('data-publishDate')
+      $runtimeCount.textContent = `${btf.diffDate(publishDate)} ${GLOBAL_CONFIG.runtime}`
+    }
+  }
+
+  /**
+   * 最後一次更新時間
+   */
+  const addLastPushDate = () => {
+    const $lastPushDateItem = document.getElementById('last-push-date')
+    if ($lastPushDateItem) {
+      const lastPushDate = $lastPushDateItem.getAttribute('data-lastPushDate')
+      $lastPushDateItem.textContent = btf.diffDate(lastPushDate, true)
+    }
+  }
+
+  /**
+   * table overflow
+   */
+  const addTableWrap = () => {
+    const $table = document.querySelectorAll('#article-container table')
+    if (!$table.length) return
+
+    $table.forEach(item => {
+      if (!item.closest('.highlight')) {
+        btf.wrap(item, 'div', { class: 'table-wrap' })
+      }
+    })
+  }
+
+  /**
+   * tag-hide
+   */
+  const clickFnOfTagHide = () => {
+    const hideButtons = document.querySelectorAll('#article-container .hide-button')
+    if (!hideButtons.length) return
+    hideButtons.forEach(item => item.addEventListener('click', e => {
+      const currentTarget = e.currentTarget
+      currentTarget.classList.add('open')
+      addJustifiedGallery(currentTarget.nextElementSibling.querySelectorAll('.gallery-container'))
+    }, { once: true }))
+  }
+
+  const tabsFn = () => {
+    const navTabsElements = document.querySelectorAll('#article-container .tabs')
+    if (!navTabsElements.length) return
+
+    const setActiveClass = (elements, activeIndex) => {
+      elements.forEach((el, index) => {
+        el.classList.toggle('active', index === activeIndex)
+      })
+    }
+
+    const handleNavClick = e => {
+      const target = e.target.closest('button')
+      if (!target || target.classList.contains('active')) return
+
+      const navItems = [...e.currentTarget.children]
+      const tabContents = [...e.currentTarget.nextElementSibling.children]
+      const indexOfButton = navItems.indexOf(target)
+      setActiveClass(navItems, indexOfButton)
+      e.currentTarget.classList.remove('no-default')
+      setActiveClass(tabContents, indexOfButton)
+      addJustifiedGallery(tabContents[indexOfButton].querySelectorAll('.gallery-container'), true)
+    }
+
+    const handleToTopClick = tabElement => e => {
+      if (e.target.closest('button')) {
+        btf.scrollToDest(btf.getEleTop(tabElement), 300)
+      }
+    }
+
+    navTabsElements.forEach(tabElement => {
+      btf.addEventListenerPjax(tabElement.firstElementChild, 'click', handleNavClick)
+      btf.addEventListenerPjax(tabElement.lastElementChild, 'click', handleToTopClick(tabElement))
+    })
+  }
+
+  const toggleCardCategory = () => {
+    const cardCategory = document.querySelector('#aside-cat-list.expandBtn')
+    if (!cardCategory) return
+
+    const handleToggleBtn = e => {
+      const target = e.target
+      if (target.nodeName === 'I') {
+        e.preventDefault()
+        target.parentNode.classList.toggle('expand')
+      }
+    }
+    btf.addEventListenerPjax(cardCategory, 'click', handleToggleBtn, true)
+  }
+
+  const addPostOutdateNotice = () => {
+    const ele = document.getElementById('post-outdate-notice')
+    if (!ele) return
+
+    const { limitDay, messagePrev, messageNext, postUpdate } = JSON.parse(ele.getAttribute('data'))
+    const diffDay = btf.diffDate(postUpdate)
+    if (diffDay >= limitDay) {
+      ele.textContent = `${messagePrev} ${diffDay} ${messageNext}`
+      ele.hidden = false
+    }
+  }
+
+  const lazyloadImg = () => {
+    window.lazyLoadInstance = new LazyLoad({
+      elements_selector: 'img',
+      threshold: 0,
+      data_src: 'lazy-src'
+    })
+
+    btf.addGlobalFn('pjaxComplete', () => {
+      window.lazyLoadInstance.update()
+    }, 'lazyload')
+  }
+
+  const relativeDate = selector => {
+    selector.forEach(item => {
+      item.textContent = btf.diffDate(item.getAttribute('datetime'), true)
+      item.style.display = 'inline'
+    })
+  }
+
+  const justifiedIndexPostUI = () => {
+    const recentPostsElement = document.getElementById('recent-posts')
+    if (!(recentPostsElement && recentPostsElement.classList.contains('masonry'))) return
+
+    const init = () => {
+      const masonryItem = new InfiniteGrid.MasonryInfiniteGrid('.recent-post-items', {
+        gap: { horizontal: 10, vertical: 20 },
+        useTransform: true,
+        useResizeObserver: true
+      })
+      masonryItem.renderItems()
+      btf.addGlobalFn('pjaxCompleteOnce', () => { masonryItem.destroy() }, 'removeJustifiedIndexPostUI')
+    }
+
+    typeof InfiniteGrid === 'function' ? init() : btf.getScript(`${GLOBAL_CONFIG.infinitegrid.js}`).then(init)
+  }
+
+  const unRefreshFn = () => {
+    window.addEventListener('resize', () => {
+      adjustMenu(false)
+      mobileSidebarOpen && btf.isHidden(document.getElementById('toggle-menu')) && sidebarFn.close()
+    })
+
+    const menuMask = document.getElementById('menu-mask')
+    menuMask && menuMask.addEventListener('click', () => { sidebarFn.close() })
+
+    clickFnOfSubMenu()
+    GLOBAL_CONFIG.islazyloadPlugin && lazyloadImg()
+    GLOBAL_CONFIG.copyright !== undefined && addCopyright()
+
+    if (GLOBAL_CONFIG.autoDarkmode) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (btf.saveToLocal.get('theme') !== undefined) return
+        e.matches ? handleThemeChange('dark') : handleThemeChange('light')
+      })
+    }
+  }
+
+  const forPostFn = () => {
+    addHighlightTool()
+    addPhotoFigcaption()
+    addJustifiedGallery(document.querySelectorAll('#article-container .gallery-container'))
+    runLightbox()
+    scrollFnToDo()
+    addTableWrap()
+    clickFnOfTagHide()
+    tabsFn()
+  }
+
+  const refreshFn = () => {
+    initAdjust()
+    justifiedIndexPostUI()
+
+    if (GLOBAL_CONFIG_SITE.pageType === 'post') {
+      addPostOutdateNotice()
+      GLOBAL_CONFIG.relativeDate.post && relativeDate(document.querySelectorAll('#post-meta time'))
     } else {
-      change_dark_icon()
+      GLOBAL_CONFIG.relativeDate.homepage && relativeDate(document.querySelectorAll('#recent-posts time'))
+      GLOBAL_CONFIG.runtime && addRuntime()
+      addLastPushDate()
+      toggleCardCategory()
     }
+
+    GLOBAL_CONFIG_SITE.pageType === 'home' && scrollDownInIndex()
+    scrollFn()
+
+    forPostFn()
+    GLOBAL_CONFIG_SITE.pageType !== 'shuoshuo' && btf.switchComments(document)
+    openMobileMenu()
   }
 
-  function change_light_icon() {
-    $("#darkmode").removeClass("fa-moon-o").addClass("fa-sun-o");
-  }
+  btf.addGlobalFn('pjaxComplete', refreshFn, 'refreshFn')
+  refreshFn()
+  unRefreshFn()
 
-  function change_dark_icon() {
-    $("#darkmode").removeClass("fa-sun-o").addClass("fa-moon-o");
-
-  }
-
-  function switchReadMode() {
-
-    var nowMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-
-    if ( nowMode == 'light') {
-      change_light_icon()
-      activateDarkMode()
-      Cookies.set('theme','dark', { expires: 2 })
-      if (is_Snackbar) snackbarShow(GLOBAL_CONFIG.Snackbar.day_to_night)
-    }else{
-      change_dark_icon()
-      activateLightMode()
-      Cookies.set('theme','light', { expires: 2 })
-      if (is_Snackbar) snackbarShow(GLOBAL_CONFIG.Snackbar.night_to_day)
-    }
-  }
-
-  $("#darkmode").click(function () {
-    switchReadMode();
-  });
-
-
-});
+  // 處理 hexo-blog-encrypt 事件
+  window.addEventListener('hexo-blog-decrypt', e => {
+    forPostFn()
+    window.translateFn.translateInitialization()
+    Object.values(window.globalFn.encrypt).forEach(fn => {
+      fn()
+    })
+  })
+})
