@@ -3884,46 +3884,6 @@ figure.highlight pre .javascript .function {
   -ms-flex-direction: column;
   flex-direction: column;
 }
-.page .card-recent-post {
-  -webkit-box-ordinal-group: true;
-  -moz-box-ordinal-group: true;
-  -o-box-ordinal-group: true;
-  -ms-flex-order: true;
-  -webkit-order: true;
-  order: true;
-}
-.page .card-categories {
-  -webkit-box-ordinal-group: true;
-  -moz-box-ordinal-group: true;
-  -o-box-ordinal-group: true;
-  -ms-flex-order: true;
-  -webkit-order: true;
-  order: true;
-}
-.page .card-tags {
-  -webkit-box-ordinal-group: true;
-  -moz-box-ordinal-group: true;
-  -o-box-ordinal-group: true;
-  -ms-flex-order: true;
-  -webkit-order: true;
-  order: true;
-}
-.page .card-archives {
-  -webkit-box-ordinal-group: true;
-  -moz-box-ordinal-group: true;
-  -o-box-ordinal-group: true;
-  -ms-flex-order: true;
-  -webkit-order: true;
-  order: true;
-}
-.page .card-webinfo {
-  -webkit-box-ordinal-group: true;
-  -moz-box-ordinal-group: true;
-  -o-box-ordinal-group: true;
-  -ms-flex-order: true;
-  -webkit-order: true;
-  order: true;
-}
 @-moz-keyframes more-btn-move {
   0%, 100% {
     -webkit-transform: translateX(0);
@@ -5625,12 +5585,6 @@ figure.highlight pre .javascript .function {
 }
 #waline-wrap .wl-comment-actions > button:not(last-child) {
   padding-right: 4px;
-}
-#vcomment textarea {
-  background: url("/img/comment_bg.png") 100% 100% no-repeat;
-}
-#vcomment textarea:focus {
-  background-image: none;
 }
 .twikoo .tk-content p {
   margin: 3px 0;
